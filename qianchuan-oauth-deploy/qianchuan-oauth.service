@@ -1,0 +1,21 @@
+[Unit]
+Description=Qianchuan OceanEngine OAuth callback service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=qianchuan-oauth
+Group=qianchuan-oauth
+EnvironmentFile=/etc/qianchuan-oauth.env
+ExecStart=/usr/bin/python3 /opt/qianchuan-oauth/app.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/qianchuan-oauth
+
+[Install]
+WantedBy=multi-user.target
