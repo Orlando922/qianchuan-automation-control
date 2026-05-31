@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>千川自动投放控制台</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23121a2f'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Arial,sans-serif' font-size='24' font-weight='700' fill='%23ffffff'%3EQC%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  </head>
+  <body>
+    <section class="login-view" id="loginView">
+      <form class="login-card" id="loginForm">
+        <div class="brand-lockup">
+          <div class="brand-mark">QC</div>
+          <div>
+            <div class="brand-title">千川控制台</div>
+            <div class="brand-subtitle">账号登录</div>
+          </div>
+        </div>
+        <label>
+          账号
+          <input id="loginUsername" type="text" autocomplete="username" placeholder="手机号或管理员账号" />
+        </label>
+        <label>
+          密码
+          <input id="loginPassword" type="password" autocomplete="current-password" />
+        </label>
+        <button class="primary-btn wide" type="submit">
+          <i data-lucide="log-in"></i>
+          <span>登录</span>
+        </button>
+        <p id="loginHint" class="login-hint">请输入管理员或子账号。</p>
+      </form>
+    </section>
+
+    <div class="app-shell hidden" id="appShell">
+      <aside class="sidebar" aria-label="账户导航">
+        <div class="brand-lockup">
+          <div class="brand-mark">QC</div>
+          <div>
+            <div class="brand-title">千川控制台</div>
+            <div class="brand-subtitle" id="userRoleText">管理员</div>
+          </div>
+        </div>
+
+        <section class="shop-block">
+          <div class="shop-avatar text-avatar" id="shopAvatar">阳</div>
+          <div class="shop-name" id="currentShopName">加载计划归属</div>
+          <div class="shop-meta" id="currentShopMeta">等待 API 返回</div>
+          <select id="shopSelect" class="shop-select hidden" aria-label="内部来源账户"></select>
+        </section>
+
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="dashboard">
+            <i data-lucide="layout-dashboard"></i>
+            <span>总览</span>
+          </button>
+          <button class="nav-item" data-view="shops">
+            <i data-lucide="badge-check"></i>
+            <span>归属</span>
+          </button>
+          <button class="nav-item" data-view="plans">
+            <i data-lucide="list-checks"></i>
+            <span>计划</span>
+          </button>
+          <button class="nav-item" data-view="products">
+            <i data-lucide="package"></i>
+            <span>商品</span>
+          </button>
+          <button class="nav-item" data-view="operations">
+            <i data-lucide="clipboard-list"></i>
+            <span>操作看板</span>
+          </button>
+          <button class="nav-item" data-view="reports">
+            <i data-lucide="bar-chart-3"></i>
+            <span>数据报表</span>
+          </button>
+          <button class="nav-item" data-view="rules">
+            <i data-lucide="sliders-horizontal"></i>
+            <span>规则</span>
+          </button>
+          <button class="nav-item admin-only" data-view="trash">
+            <i data-lucide="trash-2"></i>
+            <span>回收站</span>
+          </button>
+          <button class="nav-item admin-only" data-view="users">
+            <i data-lucide="users"></i>
+            <span>子账号</span>
+          </button>
+          <button class="nav-item" data-view="logs">
+            <i data-lucide="history"></i>
+            <span>日志</span>
+          </button>
+        </nav>
+
+        <section class="api-box">
+          <div class="api-row">
+            <span>Open API</span>
+            <strong id="apiStatus">连接中</strong>
+          </div>
+          <div class="api-row">
+            <span>计划池</span>
+            <strong id="planPoolCount">0</strong>
+          </div>
+          <div class="api-row">
+            <span>当前账号</span>
+            <strong id="currentUserName">-</strong>
+          </div>
+        </section>
+
+        <button id="logoutBtn" class="secondary-btn wide">
+          <i data-lucide="log-out"></i>
+          <span>退出</span>
+        </button>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1>自动投放规则台</h1>
+            <p id="topbarSub">真实 API · 投手计划架构</p>
+          </div>
+          <div class="topbar-actions">
+            <button id="refreshBtn" class="secondary-btn">
+              <i data-lucide="refresh-cw"></i>
+              <span>更新云端</span>
+            </button>
+            <button id="runRulesBtn" class="primary-btn">
+              <i data-lucide="zap"></i>
+              <span>执行规则</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="view active" id="view-dashboard">
+          <section class="metrics-grid">
+            <article class="metric-card">
+              <span class="metric-label">今日总消耗</span>
+              <strong id="metricSpend">0</strong>
+              <small>权限范围内计划合计</small>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">净成交ROI</span>
+              <strong id="metricRoi">0.00</strong>
+              <small>今日总产出 / 今日总消耗</small>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">今日总产出</span>
+              <strong id="metricGmv">0</strong>
+              <small>按成交 GMV 汇总</small>
+            </article>
+            <article class="metric-card">
+              <span class="metric-label">可见计划</span>
+              <strong id="metricShops">0</strong>
+              <small>按计划前缀过滤</small>
+            </article>
+            <article class="metric-card warning">
+              <span class="metric-label">待处理动作</span>
+              <strong id="pendingActionCount">0</strong>
+              <small>来自当前规则计算</small>
+            </article>
+          </section>
+
+          <section class="panel admin-only" id="accountRoiPanel">
+            <div class="panel-header compact">
+              <div>
+                <h2>子账号净成交ROI</h2>
+                <p>管理员视角，按投手绑定计划前缀汇总。</p>
+              </div>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>子账号</th>
+                    <th>角色</th>
+                    <th>计划前缀</th>
+                    <th>净成交ROI</th>
+                    <th>今日消耗</th>
+                    <th>今日产出</th>
+                    <th>计划数</th>
+                  </tr>
+                </thead>
+                <tbody id="accountRoiRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header compact">
+              <div>
+                <h2>投手计划净成交ROI</h2>
+                <p>按当前账号可见的投手和计划罗列。</p>
+              </div>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>投手 / 计划</th>
+                    <th>净成交ROI</th>
+                    <th>今日消耗</th>
+                    <th>今日产出</th>
+                    <th>订单</th>
+                    <th>归属</th>
+                  </tr>
+                </thead>
+                <tbody id="shopRoiRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-shops">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>计划归属</h2>
+                <p>计划名前两个字母识别投手，子账号直接绑定这些前缀。</p>
+              </div>
+              <button id="newShopBtn" class="icon-btn admin-only hidden" title="新增来源账户">
+                <i data-lucide="plus"></i>
+              </button>
+            </div>
+            <div class="split-grid">
+              <div class="table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>前缀</th>
+                      <th>计划数</th>
+                      <th>当前投手</th>
+                      <th>状态</th>
+                      <th class="admin-only">绑定给</th>
+                      <th class="admin-only">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="shopRows"></tbody>
+                </table>
+              </div>
+              <form class="hidden" id="shopForm" style="display: none !important">
+                <input id="shopFormOriginalId" type="hidden" />
+                <input id="shopFormName" type="hidden" />
+                <input id="shopFormShopId" type="hidden" />
+                <input id="shopFormAdvertiserId" type="hidden" />
+                <select id="shopFormStatus"><option value="active">启用</option><option value="disabled">停用</option></select>
+              </form>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-plans">
+          <section class="panel plan-panel">
+            <div class="panel-header">
+              <div>
+                <h2>计划列表</h2>
+                <p id="planPanelSub">当前账号可见的全域推视频计划。</p>
+              </div>
+              <div class="toolbar">
+                <div class="segmented" role="tablist" aria-label="计划状态">
+                  <button class="segment active" data-status="all">全部</button>
+                  <button class="segment" data-status="ENABLE">投放中</button>
+                  <button class="segment" data-status="PAUSED">已暂停</button>
+                </div>
+                <div class="segmented" role="tablist" aria-label="投放类型">
+                  <button class="plan-type-segment active" data-plan-type="all">全部类型</button>
+                  <button class="plan-type-segment" data-plan-type="SMART_BID_CUSTOM">控成本</button>
+                  <button class="plan-type-segment" data-plan-type="SMART_BID_CONSERVATIVE">放量</button>
+                </div>
+                <label class="search-box">
+                  <i data-lucide="search"></i>
+                  <input id="planSearch" type="search" placeholder="搜计划、商品、主播" />
+                </label>
+              </div>
+            </div>
+
+            <div class="table-footer">
+              <span id="planPageInfo">第 0-0 条 / 共 0 条</span>
+              <div id="planPagination" class="pagination" aria-label="计划分页"></div>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>计划</th>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th><button class="sort-th" data-sort-key="elapsedMinutes">投放时间 <span data-sort-icon="elapsedMinutes"></span></button></th>
+                    <th><button class="sort-th" data-sort-key="spend">消耗 <span data-sort-icon="spend"></span></button></th>
+                    <th><button class="sort-th" data-sort-key="roi">净成交ROI <span data-sort-icon="roi"></span></button></th>
+                    <th><button class="sort-th" data-sort-key="budget">预算 <span data-sort-icon="budget"></span></button></th>
+                    <th>规则命中</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="planRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-products">
+          <section class="panel plan-panel">
+            <div class="panel-header">
+              <div>
+                <h2>商品列表</h2>
+                <p id="productPanelSub">按完全相同商品名聚合当前可见计划。</p>
+              </div>
+              <div class="toolbar">
+                <div class="segmented" role="tablist" aria-label="商品状态">
+                  <button class="product-segment active" data-product-status="all">全部</button>
+                  <button class="product-segment" data-product-status="running">投放中</button>
+                  <button class="product-segment" data-product-status="paused">已全停</button>
+                </div>
+                <label class="search-box">
+                  <i data-lucide="search"></i>
+                  <input id="productSearch" type="search" placeholder="搜商品、投手、计划" />
+                </label>
+              </div>
+            </div>
+
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>商品</th>
+                    <th>投手</th>
+                    <th><button class="product-sort-th" data-product-sort-key="planCount">计划数 <span data-product-sort-icon="planCount"></span></button></th>
+                    <th><button class="product-sort-th" data-product-sort-key="runningCount">投放中 <span data-product-sort-icon="runningCount"></span></button></th>
+                    <th><button class="product-sort-th" data-product-sort-key="spend">消耗 <span data-product-sort-icon="spend"></span></button></th>
+                    <th><button class="product-sort-th" data-product-sort-key="roi">净成交ROI <span data-product-sort-icon="roi"></span></button></th>
+                    <th><button class="product-sort-th" data-product-sort-key="budget">预算 <span data-product-sort-icon="budget"></span></button></th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="productRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-operations">
+          <section class="metrics-grid operation-summary-grid">
+            <article class="metric-card">
+              <span>今日自动暂停</span>
+              <strong id="operationPauseTotal">0</strong>
+              <small>规则止损提交成功</small>
+            </article>
+            <article class="metric-card">
+              <span>待恢复计划</span>
+              <strong id="operationPendingTotal">0</strong>
+              <small>需要运营处理</small>
+            </article>
+            <article class="metric-card">
+              <span>已恢复计划</span>
+              <strong id="operationRestoredTotal">0</strong>
+              <small>已重新启动</small>
+            </article>
+            <article class="metric-card">
+              <span>0点预算归位</span>
+              <strong id="operationBudgetResetStatus">-</strong>
+              <small id="operationBudgetResetSub">等待记录</small>
+            </article>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header compact">
+              <div>
+                <h2>今日止损暂停记录</h2>
+                <p id="operationPanelSub">自动暂停后，运营从这里恢复计划。</p>
+              </div>
+              <button id="refreshOperationsBtn" class="icon-btn" title="刷新操作看板">
+                <i data-lucide="refresh-cw"></i>
+              </button>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>计划</th>
+                    <th>投手</th>
+                    <th>类型</th>
+                    <th>规则</th>
+                    <th>暂停时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="operationRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-reports">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>数据报表</h2>
+                <p>按账号权限读取数据，并完整保存到本地数据库。</p>
+              </div>
+              <div class="toolbar report-toolbar">
+                <label class="date-field">
+                  开始日期
+                  <input id="reportStartDate" type="date" />
+                </label>
+                <label class="date-field">
+                  结束日期
+                  <input id="reportEndDate" type="date" />
+                </label>
+                <button id="loadReportBtn" class="primary-btn">
+                  <i data-lucide="search"></i>
+                  <span>查询报表</span>
+                </button>
+              </div>
+            </div>
+
+            <section class="metrics-grid">
+              <article class="metric-card">
+                <span class="metric-label">周期消耗</span>
+                <strong id="reportSpend">0</strong>
+                <small id="reportRangeText">等待查询</small>
+              </article>
+              <article class="metric-card">
+                <span class="metric-label">周期净成交ROI</span>
+                <strong id="reportRoi">0.00</strong>
+                <small>产出 / 消耗</small>
+              </article>
+              <article class="metric-card">
+                <span class="metric-label">周期产出</span>
+                <strong id="reportGmv">0</strong>
+                <small>按成交 GMV 汇总</small>
+              </article>
+              <article class="metric-card">
+                <span class="metric-label">计划数</span>
+                <strong id="reportPlanCount">0</strong>
+                <small>本地已保存明细</small>
+              </article>
+            </section>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header compact">
+              <div>
+                <h2>投手层级</h2>
+                <p>按子账号绑定的计划前缀汇总。</p>
+              </div>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>投手</th>
+                    <th>净成交ROI</th>
+                    <th>消耗</th>
+                    <th>产出</th>
+                    <th>订单</th>
+                    <th>计划数</th>
+                  </tr>
+                </thead>
+                <tbody id="reportShopRows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header compact">
+              <div>
+                <h2>计划层级</h2>
+                <p>明细保存在本地，表格展示常用字段。</p>
+              </div>
+              <label class="search-box">
+                <i data-lucide="search"></i>
+                <input id="reportPlanSearch" type="search" placeholder="搜计划、投手、商品" />
+              </label>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>投手</th>
+                    <th>计划</th>
+                    <th>状态</th>
+                    <th>消耗</th>
+                    <th>净成交ROI</th>
+                    <th>产出</th>
+                    <th>订单</th>
+                    <th>预算</th>
+                  </tr>
+                </thead>
+                <tbody id="reportPlanRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-rules">
+          <div class="rule-mode-tabs" role="tablist" aria-label="规则工作区">
+            <button class="rule-mode-tab active" type="button" data-rule-mode="library">规则库</button>
+            <button class="rule-mode-tab" type="button" data-rule-mode="editor">编辑规则</button>
+          </div>
+          <section class="workbench">
+            <section class="panel rule-groups-panel">
+              <div class="panel-header compact">
+                <div>
+                  <h2>规则分类</h2>
+                  <p>这里只是分类容器，新增规则会归入某一类，规则总数看右侧。</p>
+                </div>
+                <button id="newGroupBtn" class="icon-btn admin-only" title="新增分类">
+                  <i data-lucide="plus"></i>
+                </button>
+              </div>
+              <div class="rule-list" id="groupList"></div>
+              <form class="rule-editor admin-only" id="groupForm">
+                <input id="groupId" type="hidden" />
+                <label>
+                  分组名
+                  <input id="groupName" type="text" />
+                </label>
+                <label>
+                  说明
+                  <input id="groupDescription" type="text" />
+                </label>
+                <button class="secondary-btn" type="submit">
+                  <i data-lucide="save"></i>
+                  <span>保存分组</span>
+                </button>
+              </form>
+            </section>
+
+            <aside class="panel rule-panel">
+              <div class="panel-header compact">
+                <div>
+                  <h2 id="rulePanelTitle">当前分类规则</h2>
+                  <p id="rulePanelSub">顶部显示全量规则数，列表只显示当前选中分类。</p>
+                </div>
+                <button id="newRuleBtn" class="icon-btn admin-only" title="新增规则">
+                  <i data-lucide="plus"></i>
+                </button>
+              </div>
+              <div class="rule-count-summary" id="ruleCountSummary">
+                <span>运行中 <strong id="ruleActiveCount">0</strong> 条</span>
+                <span>回收站 <strong id="ruleDeletedCount">0</strong> 条</span>
+                <span>全部 <strong id="ruleTotalCount">0</strong> 条</span>
+                <button class="mini-btn admin-only" id="goTrashBtn" type="button">查看回收站</button>
+              </div>
+
+              <div class="rule-list" id="ruleList"></div>
+
+              <form class="rule-editor admin-only" id="ruleForm">
+                <label>
+                  规则名
+                  <input id="ruleName" type="text" />
+                </label>
+                <div class="form-grid">
+                  <label>
+                    分组
+                    <select id="ruleGroup"></select>
+                  </label>
+                  <label>
+                    适用计划
+                    <select id="ruleShopScope">
+                      <option value="all">全部计划</option>
+                    </select>
+                  </label>
+                  <label>
+                    计划类型
+                    <select id="rulePlanTypeScope">
+                      <option value="SMART_BID_CUSTOM">控成本</option>
+                      <option value="SMART_BID_CONSERVATIVE">放量</option>
+                      <option value="all">全部类型</option>
+                    </select>
+                  </label>
+                  <label>
+                    动作
+                    <select id="ruleAction">
+                      <option value="DISABLE">暂停计划</option>
+                      <option value="SPEND_STEP_ROI_STOP">每消耗 X 后看 ROI</option>
+                      <option value="NEAR_BUDGET_ROI_ADD_BUDGET">预算快用完且 ROI 好就加</option>
+                      <option value="HOURLY_SPEND_INCREASE_ROI_GOAL">小时消耗高就提 ROI 目标</option>
+                      <option value="ADD_BUDGET">增加预算</option>
+                      <option value="NOTIFY">只通知</option>
+                    </select>
+                  </label>
+                  <label>
+                    生效开关
+                    <select id="ruleEnabled">
+                      <option value="true">启用</option>
+                      <option value="false">停用</option>
+                    </select>
+                  </label>
+                  <label>
+                    投放满
+                    <div class="unit-input">
+                      <input id="ruleAfterMinutes" type="number" min="0" step="5" />
+                      <span>分钟</span>
+                    </div>
+                  </label>
+                  <label>
+                    最低消耗
+                    <div class="unit-input">
+                      <input id="ruleMinSpend" type="number" min="0" step="10" />
+                      <span>元</span>
+                    </div>
+                  </label>
+                  <label>
+                    每小时消耗大于
+                    <div class="unit-input">
+                      <input id="ruleHourlySpendAbove" type="number" min="0" step="10" />
+                      <span>元/小时</span>
+                    </div>
+                  </label>
+                  <label>
+                    每消耗
+                    <div class="unit-input">
+                      <input id="ruleSpendStep" type="number" min="1" step="10" />
+                      <span>元</span>
+                    </div>
+                  </label>
+                  <label>
+                    延迟统计
+                    <div class="unit-input">
+                      <input id="ruleDelayMinutes" type="number" min="0" step="1" />
+                      <span>分钟</span>
+                    </div>
+                  </label>
+                  <label>
+                    净成交ROI 低于
+                    <input id="ruleRoiBelow" type="number" min="0" step="0.1" />
+                  </label>
+                  <label>
+                    净成交ROI 高于
+                    <input id="ruleRoiAbove" type="number" min="0" step="0.1" />
+                  </label>
+                  <label>
+                    剩余日预算低于
+                    <div class="unit-input">
+                      <input id="ruleBudgetRemainingPercent" type="number" min="0" max="100" step="1" />
+                      <span>%</span>
+                    </div>
+                  </label>
+                  <label>
+                    ROI目标增加
+                    <input id="ruleRoiGoalIncrement" type="number" min="0" step="0.1" />
+                  </label>
+                  <label>
+                    最高目标ROI
+                    <input id="ruleMaxRoiGoal" type="number" min="0" step="0.1" />
+                  </label>
+                  <label>
+                    持续观察
+                    <div class="unit-input">
+                      <input id="ruleHoldMinutes" type="number" min="0" step="5" />
+                      <span>分钟</span>
+                    </div>
+                  </label>
+                  <label>
+                    冷却时间
+                    <div class="unit-input">
+                      <input id="ruleCooldown" type="number" min="0" step="5" />
+                      <span>分钟</span>
+                    </div>
+                  </label>
+                  <label>
+                    预算调整方式
+                    <select id="ruleBudgetMode">
+                      <option value="percent">按比例</option>
+                      <option value="fixed">固定金额</option>
+                    </select>
+                  </label>
+                  <label>
+                    预算调整数值
+                    <input id="ruleBudgetValue" type="number" min="0" step="10" />
+                  </label>
+                  <label>
+                    单日预算调整上限
+                    <div class="unit-input">
+                      <input id="ruleDailyCap" type="number" min="0" step="100" />
+                      <span>元</span>
+                    </div>
+                  </label>
+                  <label>
+                    通知投手
+                    <select id="ruleNotify">
+                      <option value="all">企业微信 + 短信</option>
+                      <option value="wechat">企业微信</option>
+                      <option value="none">不通知</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="rule-editor-actions">
+                  <button class="secondary-btn" type="submit">
+                    <i data-lucide="save"></i>
+                    <span>保存规则</span>
+                  </button>
+                  <button class="secondary-btn danger-btn" id="deleteRuleBtn" type="button">
+                    <i data-lucide="trash-2"></i>
+                    <span>删除规则</span>
+                  </button>
+                </div>
+              </form>
+            </aside>
+          </section>
+        </section>
+
+        <section class="view" id="view-trash">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>回收站</h2>
+                <p>已删除的规则会先停用并保留在这里，可按分组查看后恢复。</p>
+              </div>
+            </div>
+            <section class="trash-summary-grid">
+              <article>
+                <span>已删除规则</span>
+                <strong id="trashTotalCount">0</strong>
+              </article>
+              <article>
+                <span>止损规则</span>
+                <strong id="trashRiskCount">0</strong>
+              </article>
+              <article>
+                <span>放量规则</span>
+                <strong id="trashScaleCount">0</strong>
+              </article>
+              <article>
+                <span>观察提醒</span>
+                <strong id="trashWatchCount">0</strong>
+              </article>
+            </section>
+            <div class="toolbar trash-toolbar">
+              <div class="segmented" role="tablist" aria-label="回收站分组">
+                <button class="trash-filter active" data-trash-group="all">全部</button>
+                <button class="trash-filter" data-trash-group="risk-stop">止损</button>
+                <button class="trash-filter" data-trash-group="scale-budget">放量</button>
+                <button class="trash-filter" data-trash-group="watch-notify">观察</button>
+              </div>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>规则</th>
+                    <th>分类</th>
+                    <th>动作</th>
+                    <th>原状态</th>
+                    <th>创建时间</th>
+                    <th>删除时间</th>
+                    <th>删除人</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="trashRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-users">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>子账号和权限</h2>
+                <p>一个员工一个子账号，账号可以绑定多个计划前缀。</p>
+              </div>
+              <button id="newUserBtn" class="icon-btn" title="新增子账号">
+                <i data-lucide="user-plus"></i>
+              </button>
+            </div>
+            <div class="split-grid">
+              <div class="table-shell">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>账号</th>
+                      <th>角色</th>
+                      <th>绑定计划</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="userRows"></tbody>
+                </table>
+              </div>
+              <form class="rule-editor" id="userForm">
+                <input id="userFormId" type="hidden" />
+                <label>
+                  登录账号
+                  <input id="userFormUsername" type="text" autocomplete="username" />
+                </label>
+                <label>
+                  显示名
+                  <input id="userFormDisplayName" type="text" />
+                </label>
+                <label>
+                  新密码
+                  <input id="userFormPassword" type="password" autocomplete="new-password" />
+                </label>
+                <div class="form-grid">
+                  <label>
+                    角色
+                    <select id="userFormRole">
+                      <option value="operator">投手，可操作绑定计划</option>
+                      <option value="viewer">只读，只看绑定计划</option>
+                      <option value="admin">管理员，全局权限</option>
+                    </select>
+                  </label>
+                  <label>
+                    状态
+                    <select id="userFormStatus">
+                      <option value="active">启用</option>
+                      <option value="disabled">停用</option>
+                    </select>
+                  </label>
+                </div>
+                <div>
+                  <div class="field-title">绑定计划前缀</div>
+                  <div class="checkbox-grid" id="userShopChecks"></div>
+                </div>
+                <button class="secondary-btn" type="submit">
+                  <i data-lucide="save"></i>
+                  <span>保存子账号</span>
+                </button>
+              </form>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-logs">
+          <section class="panel">
+            <div class="panel-header compact">
+              <div>
+                <h2>执行日志</h2>
+                <p>最近 100 条接口动作和前端操作。</p>
+              </div>
+              <button id="clearLogsBtn" class="icon-btn" title="清空本页日志">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+            <div class="log-list" id="logList"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./config.local.js"></script>
+    <script src="./rule-form-logic.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
