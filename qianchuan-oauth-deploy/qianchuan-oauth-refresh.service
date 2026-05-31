@@ -1,0 +1,16 @@
+[Unit]
+Description=Refresh Qianchuan OceanEngine OAuth token
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=qianchuan-oauth
+Group=qianchuan-oauth
+EnvironmentFile=/etc/qianchuan-oauth.env
+ExecStart=/usr/bin/python3 /opt/qianchuan-oauth/app.py refresh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/qianchuan-oauth
