@@ -2,6 +2,8 @@
 
 Local-first automation tools for OceanEngine Qianchuan ad operations.
 
+中文说明见 [README.zh-CN.md](README.zh-CN.md). The Chinese guide includes Qianchuan operation ideas, automation boundaries, and reusable rule templates.
+
 This repository packages a production-tested control stack for operators who need safer ways to run Qianchuan campaigns, audit API effects, and automate routine budget and ROI rules. It contains a browser console, a local control proxy, an OAuth/API broker, and a read-only MCP server for report analysis.
 
 ## Why this exists
